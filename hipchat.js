@@ -19,11 +19,19 @@ var INFO =
 
 function jumpTo(contents, elem) {
   elem.click();
-  setTimeout(focusChat, 1000);
+  setTimeout(function() {
+    focusChat(contents)
+  }, 200);
 }
 
-function focusChat() {
-  document.getElementsByClassName('chat_display')[0].focus();
+function focusChat(contents) {
+  var chats = contents.getElementsByClassName('chat_display');
+  for (var i in chats) {
+    if (chats[i].style.display == 'block') {
+      chats[i].focus();
+      return;
+    }
+  }
 }
 
 commands.addUserCommand(
