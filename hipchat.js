@@ -17,6 +17,24 @@ var INFO =
   </item>
 </plugin>;
 
+function isHipchat() {
+	return /^https?:\/\/.+\.hipchat\.com\//.test(buffer.URL); 
+}
+
+function restyle() {
+  let contents=gBrowser.selectedBrowser.contentDocument;
+  let style = contents.createElement('style');
+  [
+    "#header .logo { display: none; }",
+    "#header { height: 37px; }",
+    "body.chat #tabs { left: 0; }",
+    "#action_tabs li:first-child { display: none; }"
+  ].forEach(function(line) {
+    style.appendChild(contents.createTextNode(line));
+  });
+  contents.head.appendChild(style);
+}
+
 function jumpTo(contents, elem) {
   elem.click();
   setTimeout(function() {
@@ -25,43 +43,46 @@ function jumpTo(contents, elem) {
 }
 
 function focusChat(contents) {
-  var chats = contents.getElementsByClassName('chat_display');
-  for (var i in chats) {
-    if (chats[i].style.display == 'block') {
-      chats[i].focus();
-      return;
+  Array.forEach(contents.getElementsByClassName('chat_display'), function(chat) {
+    if (chat.style.display == 'block') {
+      chat.focus();
     }
-  }
+  });
 }
 
-commands.addUserCommand(
-  ['hipchatjumptonext'],
-  'Jump to the next tab',
-  function(){
-    let contents=gBrowser.selectedBrowser.contentDocument;
-    let target=contents.getElementsByClassName('selected')[0].nextSibling || contents.getElementById('tabs').firstChild;
-    jumpTo(contents, target.firstChild);
-  }
-);
-commands.addUserCommand(
-  ['hipchatjumptoprevious'],
-  'Jump to the previous tab',
-  function(){
-    let contents=gBrowser.selectedBrowser.contentDocument;
-    let target=contents.getElementsByClassName('selected')[0].previousSibling || contents.getElementById('tabs').lastChild;
-    jumpTo(contents, target.firstChild);
-  }
-);
-commands.addUserCommand(
-  ['hipchatjumptoalert'],
-  'Jump to the next highligthed tab',
-  function(){
-    let contents=gBrowser.selectedBrowser.contentDocument;
-    let targets=contents.getElementsByClassName('alert');
-    if(targets.length<1){
-      return false;
+if (isHipchat) {
+
+  getBrowser().addEventListener("DOMContentLoaded", restyle, true);
+
+  commands.addUserCommand(
+    ['hipchatjumptonext'],
+    'Jump to the next tab',
+    function(){
+      let contents=gBrowser.selectedBrowser.contentDocument;
+      let target=contents.getElementsByClassName('selected')[0].nextSibling || contents.getElementById('tabs').firstChild;
+      jumpTo(contents, target.firstChild);
     }
-    let elem = targets[0].firstChild;
-    jumpTo(contents, elem);
-  }
-);
+  );
+  commands.addUserCommand(
+    ['hipchatjumptoprevious'],
+    'Jump to the previous tab',
+    function(){
+      let contents=gBrowser.selectedBrowser.contentDocument;
+      let target=contents.getElementsByClassName('selected')[0].previousSibling || contents.getElementById('tabs').lastChild;
+      jumpTo(contents, target.firstChild);
+    }
+  );
+  commands.addUserCommand(
+    ['hipchatjumptoalert'],
+    'Jump to the next highligthed tab',
+    function(){
+      let contents=gBrowser.selectedBrowser.contentDocument;
+      let targets=contents.getElementsByClassName('alert');
+      if(targets.length<1){
+        return false;
+      }
+      let elem = targets[0].firstChild;
+      jumpTo(contents, elem);
+    }
+  );
+}
