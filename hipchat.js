@@ -50,7 +50,7 @@ function focusChat(contents) {
   });
 }
 
-if (isHipchat) {
+if (isHipchat()) {
 
   getBrowser().addEventListener("DOMContentLoaded", restyle, true);
 
