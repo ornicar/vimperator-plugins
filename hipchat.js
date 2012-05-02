@@ -18,7 +18,7 @@ var INFO =
 </plugin>;
 
 function isHipchat() {
-	return /^https?:\/\/.+\.hipchat\.com\//.test(buffer.URL); 
+	return /hipchat\.com\/chat/.test(buffer.URL); 
 }
 
 function restyle() {
