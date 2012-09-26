@@ -38,6 +38,12 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
     // リストの最大保持数
     listMax: 100,
 
+    // リストの表示順（昇順／降順）
+    listAscendingOrder: true,
+
+    // ツイートされる度に最新ツイート位置までスクロールする
+    listAutoScroll: true,
+
     // 日本語だけ for filter stream
     jpOnly: true,
 
@@ -48,7 +54,13 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
     dontStop: true,
 
     // サイドバーが閉じていても、こっそり開始しておく
-    silentStart: false
+    silentStart: false,
+
+    // 配列かオブジェクトを返すと、変更できる。
+    // 文字列 "reject" を返すと、そもそもツイートが表示されなくなる。
+    modifier: function (msg, tab, streamName) {
+      return [msg, tab, streamName];
+    }
   };
 
   // 日本語判定
@@ -113,9 +125,12 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
       XML.ignoreWhitespace = true;
       let xml;
       let sbWidth = getSidebarWindow().document.width;
+      let richlistitemClasses = [className('tweet-panel'), className('tweet-' + t.type)];
+      let nameClass = t.protected ? className('tweet-protected') : '';
       xml =
         <richlistitem
-          class={[className('tweet-panel'), className('tweet-' + t.type)].join(' ')}
+          id={t.id}
+          class={richlistitemClasses.join(' ')}
           style={[
             "font-size: " + px(Config.fontSize - (t.text.length > 70 ? 2 : 0)),
             "width: " + px(sbWidth - 100) + ' !important'
@@ -127,7 +142,7 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
             </vbox>
             <vbox style={"width: " + (sbWidth - 48 - 35) + "px !important"}>
               <hbox>
-                <label style="font-weight: bold">{escapeBreakers(t.name)}</label>
+                <label class={nameClass} style="font-weight: bold">{escapeBreakers(t.name)}</label>
                 <spacer flex="1"/>
                 <label>{t.sub || ''}</label>
               </hbox>
@@ -158,6 +173,17 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
     function append (t, tab, streamName) {
       tab = tab || 'home';
 
+      let modified = Config.modifier && Config.modifier(t, tab, streamName);
+      if (modified) {
+        if (modified instanceof Array) {
+          [t, tab, streamName] = modified;
+        } if (modified === 'reject') {
+          return;
+        } else {
+          t = modified;
+        }
+      }
+
       let now = JSON.stringify({name: t.name, text: t.text, tab: tab});
       if (latest === now) {
         if (latestNode)
@@ -172,13 +198,47 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
       let cntr = getSidebarWindow().document.getElementById('tw-anekos-sb-' + tab + '-list');
       let dom = xmlToDom(messageToXML(t));
       let repDom = dom.cloneNode(true);
+      let visibleIndex = cntr.getIndexOfFirstVisibleRow();
       let len = cntr.itemCount;
-      cntr.appendChild(repDom);
+      if (Config.listAscendingOrder) {
+        cntr.appendChild(repDom);
+      } else {
+        cntr.insertBefore(repDom, cntr.firstChild);
+        visibleIndex += 1;
+      }
       latestNode = repDom;
 
-      cntr.scrollToIndex(len - 1);
-      if (len > Config.listMax)
-        cntr.removeChild(cntr.firstChild);
+      if (len > Config.listMax) {
+        if (Config.listAscendingOrder) {
+          cntr.removeChild(cntr.firstChild);
+          visibleIndex -= 1;
+        } else {
+          cntr.removeChild(cntr.lastChild);
+        }
+        len -= 1;
+      }
+
+      if (Config.listAutoScroll) {
+        if (Config.listAscendingOrder) {
+          cntr.scrollToIndex(len - 1);
+        } else {
+          cntr.scrollToIndex(0);
+        }
+      } else {
+        if (Config.listAscendingOrder) {
+          if (len - visibleIndex < 10) { // 10 = 絶妙な値！これでいいのか！
+            cntr.scrollToIndex(len - 1);
+          } else {
+            cntr.scrollToIndex(visibleIndex);
+          }
+        } else {
+          if (visibleIndex < 3) { // 3 = 絶妙な値！これでいいのか！
+            cntr.scrollToIndex(0);
+          } else {
+            cntr.scrollToIndex(visibleIndex);
+          }
+        }
+      }
     }
 
     return append;
@@ -226,6 +286,8 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
              ||
              (msg.direct_message);
 
+    let protected = msg.user && msg.user.protected;
+
     // Fav test
     try {
       //liberator.log(JSON.stringify(msg, null, 2));
@@ -234,11 +296,10 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
           name: '>' + msg.target_object.user.screen_name + '<',
           img: msg.target_object.user.profile_image_url,
           text: msg.target_object.text,
-          type: 'favorite'
+          type: 'favorite',
+          protected: protected
         };
         appendTweet(t, 'home', streamName);
-        appendTweet(t, 'debug', streamName);
-        Config.sound.debug.play();
       }
     } catch (e) {
       liberator.log(e);
@@ -256,6 +317,7 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
 
     if (msg.direct_message) {
       t = {
+        id: msg.id,
         name: msg.direct_message.sender.screen_name,
         img: msg.direct_message.sender.profile_image_url,
         text: msg.direct_message.text,
@@ -264,6 +326,7 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
       };
     } else if (msg.retweeted_status) {
       t = {
+        id: msg.id,
         name: my ? msg.user.screen_name : msg.retweeted_status.user.screen_name,
         img: my ? msg.user.profile_image_url : msg.retweeted_status.user.profile_image_url,
         text: msg.retweeted_status.text,
@@ -307,6 +370,7 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
       dummy = true;
     } else if (msg.user && msg.text && msg.in_reply_to_screen_name == screenName) {
       t = {
+        id: msg.id,
         name: msg.user.screen_name,
         img: msg.user.profile_image_url,
         text: msg.text,
@@ -314,6 +378,7 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
       };
     } else if (msg.user && msg.text) {
       t = {
+        id: msg.id,
         name: msg.user.screen_name,
         img: msg.user.profile_image_url,
         text: msg.text,
@@ -322,6 +387,8 @@ liberator.modules.TWAnekoSB = ANekoSB = (function () {
     }
 
     if (t) {
+      t.protected = protected;
+
       if (Config.earthquake && /\u5730\u9707/.test(t.text) && msg.text.length < 20 && msg.user && msg.user.location) {
         t.text += ' [\u5730\u57DF: ' + msg.user.location + ']';
       }

@@ -1,5 +1,5 @@
 /* NEW BSD LICENSE {{{
-Copyright (c) 2009-2011, anekos.
+Copyright (c) 2009-2012, anekos.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -32,29 +32,72 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 }}} */
 
-// PLUGIN_INFO {{{
-let PLUGIN_INFO =
-<VimperatorPlugin>
-  <name>Functions Template</name>
-  <name lang="ja">関数テンプレート</name>
-  <description>function Template</description>
-  <description lang="ja">Vimperator の関数のテンプレート</description>
-  <version>1.3.0</version>
-  <author mail="anekos@snca.net" homepage="http://d.hatena.ne.jp/nokturnalmortum/">anekos</author>
-  <license>new BSD License (Please read the source code comments of this plugin)</license>
-  <license lang="ja">修正BSDライセンス (ソースコードのコメントを参照してください)</license>
-  <updateURL>https://github.com/vimpr/vimperator-plugins/raw/master/function-template.js</updateURL>
-  <minVersion>3.0</minVersion>
-  <detail><![CDATA[
-    Functions template
-    (Fix|Add) me!
-  ]]></detail>
-  <detail lang="ja"><![CDATA[
-    関数のテンプレート
-    (おかしい|書かれていない)(関数|引数|説明)があったら適当に(足|なお)してください。
-  ]]></detail>
-</VimperatorPlugin>;
+// INFO {{{
+let INFO =
+<>
+  <plugin name="XXXX" version="1.0.0"
+          href="http://vimpr.github.com/"
+          summary="XXXXX"
+          lang="en-US"
+          xmlns="http://vimperator.org/namespaces/liberator">
+    <author email="xxxx@xxxx.net">xxxxx</author>
+    <license>New BSD License</license>
+    <project name="Vimperator" minVersion="3.0"/>
+    <p>
+      This is the Sample Plugin
+    </p>
+    <item>
+      <tags>:hoge</tags>
+      <spec>:hoge <oa>-opt1=<a>val1</a></oa></spec>
+      <description><p>
+        Description for Command
+      </p>
+      <code><![CDATA[
+javascript<<EOM
+liberator.globalVariables.this_is_sample = [{
+    neko_tails: 2,
+    neko_eyes: 2,
+    neko_legs: 4,
+    neko_head: 1
+  }];
+EOM
+      ]]></code>
+      </description>
+    </item>
+  </plugin>
+  <plugin name="XXXX" version="1.0.0"
+          href="http://vimpr.github.com/"
+          summary="XXXXX"
+          lang="ja"
+          xmlns="http://vimperator.org/namespaces/liberator">
+    <author email="xxxx@xxxx.net">xxxxx</author>
+    <license>New BSD License</license>
+    <project name="Vimperator" minVersion="3.0"/>
+    <p>
+      サンプル用のプラグインだよ
+    </p>
+    <item>
+      <tags>:hoge</tags>
+      <spec>:hoge <oa>-opt1=<a>val1</a></oa></spec>
+      <description><p>
+        コマンドの説明
+      </p>
+      <code><![CDATA[
+javascript<<EOM
+liberator.globalVariables.this_is_sample = [{
+    neko_tails: 2,
+    neko_eyes: 2,
+    neko_legs: 4,
+    neko_head: 1
+  }];
+EOM
+      ]]></code>
+      </description>
+    </item>
+  </plugin>
+</>;
 // }}}
+
 
 (function () {
   // XXX 以下は実行しないよ。
@@ -102,7 +145,7 @@ let PLUGIN_INFO =
       subCommands: [
         new Command(
           ['subA'],
-          'Sub command A'
+          'Sub command A',
           function (args) {
             // addUserCommand のと同じ
           },
@@ -112,7 +155,7 @@ let PLUGIN_INFO =
         ),
         new Command(
           ['subB'],
-          'Sub command B'
+          'Sub command B',
           function (args) { },
           {}
         )
@@ -129,7 +172,7 @@ let PLUGIN_INFO =
   options.add(
     ['names'],
     'description',
-    'string', // type: string, stringlist, charlist, boolean
+    'string', // type: string, stringlist, charlist, boolean, number
     'defaultValue',
     {
       scope: Option.SCOPE_GLOBAL, // <- default
@@ -143,6 +186,11 @@ let PLUGIN_INFO =
         return value;
       },
       completer: function () {
+        return [
+          ["value1", "description one"],
+          ["value2", "description two"],
+          ["value3", "description three"],
+        ];
       },
       validator: function () {
       },
