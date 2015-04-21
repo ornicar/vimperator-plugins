@@ -1,6 +1,6 @@
 /* NEW BSD LICENSE {{{
 Copyright (c) 2009-2010, anekos.
-Copyright (c) 2012, Jagua.
+Copyright (c) 2012-2014, Jagua.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -33,27 +33,9 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 }}} */
 
-// PLUGIN_INFO {{{
-let PLUGIN_INFO =
-<VimperatorPlugin>
-  <name>Microsoft Translator</name>
-  <name lang="ja">Microsoft Translator</name>
-  <description>Translate with Microsoft AJAX Language API</description>
-  <version>1.0.0</version>
-  <author mail="anekos@snca.net" homepage="http://d.hatena.ne.jp/nokturnalmortum/">anekos</author>
-  <author homepage="https://github.com/Jagua">Jagua</author>
-  <license>new BSD License (Please read the source code comments of this plugin)</license>
-  <license lang="ja">修正BSDライセンス (ソースコードのコメントを参照してください)</license>
-  <updateURL>https://github.com/vimpr/vimperator-plugins/raw/master/microsoft-translator.js</updateURL>
-  <require>_libly.js</require>
-  <minVersion>2.3</minVersion>
-  <maxVersion>3.3</maxVersion>
-</VimperatorPlugin>;
-// }}}
-
 // INFO {{{
-let INFO =
-<plugin name="Microsoft Translator" version="1.0.0"
+let INFO = xml`
+<plugin name="Microsoft Translator" version="1.1.0"
         href="http://github.com/vimpr/vimperator-plugins/blob/master/microsoft-translator.js"
         summary="Translate with Microsoft AJAX Language API"
         xmlns="http://vimperator.org/namespaces/liberator">
@@ -72,9 +54,9 @@ let INFO =
         Translate!!!!!!!!!!!
       </p>
       <p>
-        You need to get an Access Token from http://www.bing.com/developers/appids.aspx
-        to use this plugin. and add liberator.globalVariables.mstrans_appid setting
-        to your ".vimperatorrc".
+        You need to get an Access Token from http://msdn.microsoft.com/en-us/library/hh454950.aspx
+        to use this plugin. and add g:microsoft_translator_client_id and
+        g:microsoft_translator_client_secret settings to your ".vimperatorrc".
       </p>
       <p>The following options are interpreted.</p>
       <dl>
@@ -90,7 +72,7 @@ let INFO =
       </dl>
     </description>
   </item>
-</plugin>;
+</plugin>`;
 // }}}
 
 (function () {
@@ -98,99 +80,58 @@ let INFO =
   const refererURL = 'https://github.com/vimpr/vimperator-plugins/raw/master/microsoft-translator.js';
 
   const languages = [
-    ['af', 'Afrikaans'],
-    ['sq', 'Albanian'],
-    ['am', 'Amharic'],
     ['ar', 'Arabic'],
-    ['hy', 'Armenian'],
-    ['az', 'Azerbaijani'],
-    ['eu', 'Basque'],
-    ['be', 'Belarusian'],
-    ['bn', 'Bengali'],
-    ['bh', 'Bihari'],
     ['bg', 'Bulgarian'],
-    ['my', 'Burmese'],
     ['ca', 'Catalan'],
-    ['chr', 'Cherokee'],
-    ['zh', 'Chinese'],
-    ['zh-CN', 'Chinese_simplified'],
-    ['zh-TW', 'Chinese_traditional'],
-    ['hr', 'Croatian'],
+    ['zh-CHS', 'Chinese (Simplified)'],
+    ['zh-CHT', 'Chinese (Traditional)'],
     ['cs', 'Czech'],
     ['da', 'Danish'],
-    ['dv', 'Dhivehi'],
     ['nl', 'Dutch'],
     ['en', 'English'],
-    ['eo', 'Esperanto'],
     ['et', 'Estonian'],
-    ['tl', 'Filipino'],
     ['fi', 'Finnish'],
     ['fr', 'French'],
-    ['gl', 'Galician'],
-    ['ka', 'Georgian'],
     ['de', 'German'],
     ['el', 'Greek'],
-    ['gn', 'Guarani'],
-    ['gu', 'Gujarati'],
-    ['iw', 'Hebrew'],
+    ['ht', 'Haitian Creole'],
+    ['he', 'Hebrew'],
     ['hi', 'Hindi'],
+    ['mww', 'Hmong Daw'],
     ['hu', 'Hungarian'],
-    ['is', 'Icelandic'],
     ['id', 'Indonesian'],
-    ['iu', 'Inuktitut'],
-    ['ga', 'Irish'],
     ['it', 'Italian'],
     ['ja', 'Japanese'],
-    ['kn', 'Kannada'],
-    ['kk', 'Kazakh'],
-    ['km', 'Khmer'],
     ['ko', 'Korean'],
-    ['ku', 'Kurdish'],
-    ['ky', 'Kyrgyz'],
-    ['lo', 'Laothian'],
     ['lv', 'Latvian'],
     ['lt', 'Lithuanian'],
-    ['mk', 'Macedonian'],
     ['ms', 'Malay'],
-    ['ml', 'Malayalam'],
-    ['mt', 'Maltese'],
-    ['mr', 'Marathi'],
-    ['mn', 'Mongolian'],
-    ['ne', 'Nepali'],
     ['no', 'Norwegian'],
-    ['or', 'Oriya'],
-    ['ps', 'Pashto'],
-    ['fa', 'Persian'],
+    ['fa', 'Persian (Farsi)'],
     ['pl', 'Polish'],
-    ['pt-PT', 'Portuguese'],
-    ['pa', 'Punjabi'],
+    ['pt', 'Portuguese'],
     ['ro', 'Romanian'],
     ['ru', 'Russian'],
-    ['sa', 'Sanskrit'],
-    ['sr', 'Serbian'],
-    ['sd', 'Sindhi'],
-    ['si', 'Sinhalese'],
     ['sk', 'Slovak'],
     ['sl', 'Slovenian'],
     ['es', 'Spanish'],
-    ['sw', 'Swahili'],
     ['sv', 'Swedish'],
-    ['tg', 'Tajik'],
-    ['ta', 'Tamil'],
-    ['tl', 'Tagalog'],
-    ['te', 'Telugu'],
     ['th', 'Thai'],
-    ['bo', 'Tibetan'],
     ['tr', 'Turkish'],
     ['uk', 'Ukrainian'],
     ['ur', 'Urdu'],
-    ['uz', 'Uzbek'],
-    ['ug', 'Uighur'],
     ['vi', 'Vietnamese'],
-    ['cy', 'Welsh'],
-    ['yi', 'Yiddish'],
     ['', 'Unknown']
   ];
+
+  const config = {
+    access_token: liberator.globalVariables.mstrans_appid || '',
+    expires: 0,
+    get client_id ()
+      liberator.globalVariables.microsoft_translator_client_id,
+    get client_secret ()
+      liberator.globalVariables.microsoft_translator_client_secret,
+  };
 
   const settings = {
     get pair ()
@@ -199,52 +140,93 @@ let INFO =
       (liberator.globalVariables.microsoft_translator_actions || 'echo').split(' ')
   };
 
-  function guessRequest (appId, text, done) {
-    let url =
-      'http://api.microsofttranslator.com/V2/Ajax.svc/Detect' +
-      '?appId=' + appId +
-      '&text=' + encodeURIComponent(text);
-    let req =
-      new plugins.libly.Request(
-        url,
-        {
+  function auth(config, text, opts, callback) {
+    if (config.client_secret == undefined || (new Date()).getTime() / 1000 < config.expires) {
+      callback(config, text, opts);
+    } else {
+      let url = 'https://datamarket.accesscontrol.windows.net/v2/OAuth2-13';
+      let postBody =
+        'client_id=' + encodeURIComponent(config.client_id) +
+        '&client_secret=' + encodeURIComponent(config.client_secret) +
+        '&scope=http://api.microsofttranslator.com' +
+        '&grant_type=client_credentials';
+      let req =
+        new plugins.libly.Request(
+          url,
+          {
             Referrer: refererURL,
+          },
+          {
+            postBody: postBody,
+          }
+        );
+      req.addEventListener(
+        'onSuccess',
+        function (res) {
+          let token = JSON.parse(res.responseText);
+          if (token.hasOwnProperty('expires_in') && token.expires_in.match(/^\d+$/)) {
+            config.expires = (new Date()).getTime() / 1000 + parseInt(token.expires_in, 10);
+            config.access_token = token.access_token;
+            callback(config, text, opts);
+          }
         }
       );
-    req.addEventListener(
-      'onSuccess',
-      function (res) {
-        var result = res.responseText;
-        done(result.substring(1,3));
-      }
-    );
-    req.get();
+      req.post();
+    }
   }
 
-  function translateRequest (appId, text, opts /* from, to, done */) {
-    opts || (opts = {});
-    let url =
-      'http://api.microsofttranslator.com/V2/Ajax.svc/Translate' +
-      '?appId=' + appId +
-      '&text=' + encodeURIComponent(text) +
-      '&from=' + (opts.from || 'en') + '&to=' + (opts.to || 'ja') +
-      '&contentType=text/plain'  ;
-    let req =
-      new plugins.libly.Request(
-        url,
-        {
-            Referrer: refererURL,
+  function guessRequest (config, text, opts /* from, to, done */) {
+    auth(config, text, opts, function (config, text, opts) {
+      let url =
+        'http://api.microsofttranslator.com/V2/Ajax.svc/Detect' +
+        '?appId=' + (config.client_secret == undefined ? config.access_token : '') +
+        '&text=' + encodeURIComponent(text);
+      let req =
+        new plugins.libly.Request(
+          url,
+          {
+              Referrer: refererURL,
+              Authorization: 'Bearer ' + config.access_token,
+          }
+        );
+      req.addEventListener(
+        'onSuccess',
+        function (res) {
+          var result = res.responseText;
+          opts.done(result.substring(1,result.length-1));
         }
       );
-    req.addEventListener(
-      'onSuccess',
-      function (res) {
-        let translated = res.responseText;
-        liberator.log('translated: ' + translated);
-        opts.done(translated);
-      }
-    );
-    req.get();
+      req.get();
+    });
+  }
+
+  function translateRequest (config, text, opts /* from, to, done */) {
+    auth(config, text, opts, function (config, text, opts) {
+      opts || (opts = {});
+      let url =
+        'http://api.microsofttranslator.com/V2/Ajax.svc/Translate' +
+        '?appId=' + (config.client_secret == undefined ? config.access_token : '') +
+        '&text=' + encodeURIComponent(text) +
+        '&from=' + (opts.from || 'en') + '&to=' + (opts.to || 'ja') +
+        '&contentType=text/plain';
+      let req =
+        new plugins.libly.Request(
+          url,
+          {
+              Referrer: refererURL,
+              Authorization: 'Bearer ' + config.access_token,
+          }
+        );
+      req.addEventListener(
+        'onSuccess',
+        function (res) {
+          let translated = res.responseText;
+          liberator.log('translated: ' + translated);
+          opts.done(translated);
+        }
+      );
+      req.get();
+    });
   }
 
   // 何語か妄想する
@@ -307,13 +289,12 @@ let INFO =
     ['mstrans'],
     'Microsoft Translator',
     function (args) {
-      let appId = liberator.globalVariables.mstrans_appid;
       let text = args.literalArg;
       let actionNames = args['-action'] || settings.actions;
       let [from, to] = [args['-from'], args['-to']];
 
-      if (appId == undefined) {
-        liberator.echoerr('The setting of liberator.globalVariables.mstrans_appid in .vimperatorrc is required.');
+      if (config.client_id == undefined && config.client_secret == undefined && liberator.globalVariables.mstrans_appid == undefined) {
+        liberator.echoerr('The setting of g:microsoft_translator_client_(id|secret) in .vimperatorrc is required.');
         return false;
       }
 
@@ -322,9 +303,11 @@ let INFO =
 
       if (args['-guess']) {
         guessRequest(
-          appId,
+          config,
           text,
-          function (lang) [liberator.echo("<p>"+v+"</p>",liberator.commandline.FORCE_MULTILINE) for ([, [k, v]] in Iterator(languages)) if (k == lang)]
+          {
+            done: function (lang) [liberator.echo("<p>"+v+"</p>",commandline.FORCE_MULTILINE) for ([, [k, v]] in Iterator(languages)) if (k == lang)]
+          }
         );
         return;
       }
@@ -343,7 +326,7 @@ let INFO =
 
       function req () {
         translateRequest(
-          appId,
+          config,
           text,
           {
             done: function (text) actionNames.forEach(function (name) actions[name](text)),
@@ -358,15 +341,17 @@ let INFO =
         req();
       } else {
         guessRequest(
-          appId,
+          config,
           text,
-          function (fromLang) {
-            from = fromLang;
-            liberator.log('lang: ' + fromLang);
-            setPair();
-            if (args['-to'])
-              to = args['-to'];
-            req();
+          {
+            done: function (fromLang) {
+                    from = fromLang;
+                    liberator.log('lang: ' + fromLang);
+                    setPair();
+                    if (args['-to'])
+                      to = args['-to'];
+                    req();
+                  },
           }
         );
       }

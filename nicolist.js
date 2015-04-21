@@ -3,7 +3,7 @@
  * http://twitter.com/ebith
  */
 
-var INFO =
+var INFO = xml`
 <plugin name="nicolist"
         version="0.3"
         summary="ニコニコ動画のマイリストを操作します"
@@ -31,8 +31,9 @@ var INFO =
     <spec>:nicolist open <a>mylist-id</a> <a>video-id</a></spec>
     <description><p><a>mylist-id</a>のみであればマイリストを、<a>video-id</a>の指定もあれば動画を開きます</p></description>
   </item>
-</plugin>;
+</plugin>`;
 
+let video = {};
 commands.addUserCommand(
   ['nicolist'],
   'ニコニコ動画のマイリストを操作する',
@@ -45,19 +46,97 @@ commands.addUserCommand(
         ['a[dd]'],
         'マイリストに追加する',
         function (args) {
-          let video_id = content.window.wrappedJSObject.video_id;
+          let video_id = content.window.wrappedJSObject.WatchJsApi.video.getVideoID();
           if (!video_id) {
             return liberator.echoerr('nicolist : watchページじゃない！');
           }
           let [mylist_id, description] = args;
           if (!description){ description = ''; }  //undefinedが入っているとそれをマイリストコメントにしてしまうので。
-          let token = content.window.wrappedJSObject.so.variables.csrfToken;
+          let token = getToken(true);
           let url = 'http://www.nicovideo.jp/api/mylist/add?group_id=' + mylist_id + '&token=' + token + '&item_id=' + video_id + '&description=' + description;
           liberator.echo('nicolist add : ' + JSON.parse(util.httpGet(url).responseText).status);
         },
         {
           literal: 1,
           completer: mylistCompleter,
+        }
+      ),
+      new Command(
+        ['p[lay]'],
+        '動画を再生する',
+        function (args) {
+          let [mylist_id, video_id] = args;
+          let video_ids = []
+          if (video_id) {
+            video_ids = [video_id];
+          } else if (mylist_id) {
+            let list = JSON.parse(util.httpGet('http://www.nicovideo.jp/api/mylist/list?group_id=' + mylist_id).responseText).mylistitem;
+            list.forEach(function(v){
+              video_ids.push(v.item_data.video_id);
+            });
+          } else { return; }
+          video_ids = video_ids.shuffle();
+          let i = 0;
+
+          video.container = document.createElementNS('http://www.w3.org/1999/xhtml', 'video');
+          video.container.volume = 0.7;  // 効いてない
+          video.container.autoplay = true;
+          ['error', 'ended'].forEach(function(event) {
+            video.container.addEventListener(event, function() {
+              if (video.container.src === 'chrome://browser/content/browser.xul') { return; }
+              if (!video_ids[i]) { return; }
+              i++;
+              setupVideo();
+            });
+          });
+
+          setupVideo();
+
+          function setupVideo() {
+            video.flv = {}
+            util.httpGet('http://flapi.nicovideo.jp/api/getflv/' + video_ids[i]).responseText.split('&').forEach(function(param){
+              let tmp = param.split('=');
+              video.flv[tmp[0]] = decodeURIComponent(tmp[1]);
+            });
+
+            video.thumbinfo = util.httpGet('http://ext.nicovideo.jp/api/getthumbinfo/' + video_ids[i]).responseXML;
+            video.video_id = video.thumbinfo.getElementsByTagName('video_id')[0].firstChild.nodeValue;
+            video.title = video.thumbinfo.getElementsByTagName('title')[0].firstChild.nodeValue;
+            video.description = video.thumbinfo.getElementsByTagName('description')[0].firstChild.nodeValue;
+
+            util.httpGet('http://www.nicovideo.jp/watch/' + video_ids[i]); // watchページにアクセスしておかないと読み込み時403
+            video.container.src = video.flv.url;
+          }
+        },
+        {
+          literal: 1,
+          completer: mylistCompleter,
+        }
+      ),
+      new Command(
+        ['s[top]'],
+        '動画の再生を止める',
+        function (args) {
+          video.container.pause();
+          video.container.src = ''; // chrome://browser/content/browser.xul になる
+        }
+      ),
+      new Command(
+        ['now[Playing]'],
+        '再生中の動画情報',
+        function (arg) {
+          if (arg) {
+            let url = 'http://www.nicovideo.jp/watch/' + arg;
+            liberator.open(url, liberator.NEW_TAB);
+          }
+        },
+        {
+          literal: 0,
+          completer: function(context, args) {
+            context.filters = [CompletionContext.Filter.textDescription];
+            context.title = ['id', 'title']
+            context.completions = [[video.video_id, video.title]]
+          }
         }
       ),
       new Command(
@@ -141,7 +220,7 @@ function mylistCompleter (context, args) {
     util.httpGet(url, function (xhr) {
       context.incomplete = false;
 
-      if (/open/.test(context.name)) {
+      if (/open|play/.test(context.name)) {
         context.completions = [
           [v.item_data.video_id, v.item_data.title]
           for ([k, v] in Iterator(JSON.parse(xhr.responseText).mylistitem.sort(sorter)))
@@ -160,7 +239,23 @@ function sorter (a, b) {
   return - (a.create_time - b.create_time);
 }
 
-function getToken () {
-  let url = 'http://www.nicovideo.jp/my/mylist';
-  return util.httpGet(url).responseText.match(/NicoAPI\.token.+/)[0].match(/\d{5}-\d{10}-[\d\w]{40}/)[0];
+function getToken (isWatchPage) {
+  if (isWatchPage) {
+    let watchAPIData = JSON.parse(content.document.wrappedJSObject.getElementById('watchAPIDataContainer').firstChild.nodeValue);
+    return watchAPIData.flashvars.csrfToken;
+  } else {
+    let url = 'http://www.nicovideo.jp/my/mylist';
+    return util.httpGet(url).responseText.match(/NicoAPI\.token.+/)[0].match(/\d{5}-\d{10}-[\d\w]{40}/)[0];
+  }
+}
+
+Array.prototype.shuffle = function() {
+    var i = this.length;
+    while(i){
+        var j = Math.floor(Math.random()*i);
+        var t = this[--i];
+        this[i] = this[j];
+        this[j] = t;
+    }
+    return this;
 }

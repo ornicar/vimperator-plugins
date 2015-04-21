@@ -19,7 +19,7 @@
 // </html>
 
 // PLUGIN_INFO {{{
-let INFO =
+let INFO = xml`
 <plugin name="Walk-Input" version="1.3.0"
         href="http://github.com/vimpr/vimperator-plugins/blob/master/walk-input.js"
         summary="The focus walks 'input' and 'textarea' element."
@@ -59,7 +59,7 @@ let INFO =
             <p>Move focus backward</p>
 	</description>
     </item>
-</plugin>;
+</plugin>`;
 // }}}
 
 (function () {
@@ -80,8 +80,8 @@ var types = [
   "url",
   "tel",
   "color",
-].map(function(type) "@type=" + type.quote()).join(" or ");
-var xpath = '//input[(' + types + ' or not(@type)) and not(@disabled)] | //textarea';
+].map(function(type) "@type=" + JSON.stringify(type)).join(" or ");
+var xpath = '//input[(' + types + ' or not(@type)) and not(@disabled)] | //textarea | //*[@contenteditable="true"]';
 
 function isVisible (elem) {
   while (elem && !(elem instanceof HTMLDocument)) {

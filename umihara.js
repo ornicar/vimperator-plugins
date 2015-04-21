@@ -33,7 +33,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 }}} */
 
 // PLUGIN_INFO {{{
-let PLUGIN_INFO =
+let PLUGIN_INFO = xml`
 <VimperatorPlugin>
   <name>Exchange Converter</name>
   <name lang="ja">外国為替換算</name>
@@ -86,7 +86,7 @@ let PLUGIN_INFO =
     == Require ==
       _libly.js
   ]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 // }}}
 
 (function () {
@@ -137,7 +137,7 @@ let PLUGIN_INFO =
   ];
 
   function echo (msg) {
-    liberator.echo(<pre>{msg}</pre>);
+    liberator.echo(xml`<pre>${msg}</pre>`);
   }
 
   function kawase (value, clipboard, from, to) {
@@ -149,15 +149,14 @@ let PLUGIN_INFO =
     if (to == '-')
       to = defaultTarget;
     //let url = 'http://quote.yahoo.co.jp/m5?a=' + value + '&s=' + from + '&t=' + to;
-    let url = 'http://info.finance.yahoo.co.jp/exchange/convert/?a=' + value + '&s=' + from + '&t=' + to;
+    let url = 'http://info.finance.yahoo.co.jp/fx/convert/?a=' + value + '&s=' + from + '&t=' + to;
     var req = new XMLHttpRequest();
     req.open('GET', url);
     req.onreadystatechange = function (aEvt) {
       if (req.readyState == 4 && req.status == 200) {
         let html = req.responseText;
         let doc = plugins.libly.$U.createHTMLDocument(html);
-        liberator.log(doc);
-        let a = doc.querySelector('tbody.yjM > tr > td > a[href^="http://stocks"]');
+        let a = doc.querySelector('tbody > tr > td > a[href^="http://rdsig.yahoo.co.jp"]');
         if (a) {
           let tr = a.parentNode.parentNode;
           liberator.__tr = tr;
@@ -170,7 +169,7 @@ let PLUGIN_INFO =
                      '\n ' + to + ': ' + toValue +
                      '\n rate: ' + rate +
                      '\n time: ' + time;
-          echo(text);
+          echo('<<Results>>\n' + text);
           if (clipboard) {
             resultBuffer += text + '\n';
             util.copyToClipboard(resultBuffer);
@@ -210,8 +209,6 @@ let PLUGIN_INFO =
     ['kawase'],
     'Umihara Kawase Meow',
     function (args) {
-      liberator.echo('<<Results>>\n')
-
       if (args.length == 0)
         args.push('1');
 

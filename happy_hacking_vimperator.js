@@ -32,7 +32,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-let PLUGIN_INFO =
+let PLUGIN_INFO = xml`
 <VimperatorPlugin>
   <name>Happy Happy Vimperator</name>
   <description>This plugin makes you to True Vimperatorer</description>
@@ -51,7 +51,7 @@ let PLUGIN_INFO =
     == Requirements ==
     Steel Heart
   ]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 
 (function () {
 
@@ -3276,16 +3276,16 @@ let PLUGIN_INFO =
         let sz = innerWidth / msg.length / 1.5;
         if (plugins.namakubi && typeof plugins.namakubi.talk == 'function')
           plugins.namakubi.talk(msg);
-        liberator.echo(
+        liberator.echo(xml`
           <div style="background: white; color: black;">
             <table>
               <tr>
-                <td><img src={gunsou}/></td>
-                <td style={"font-size: " + sz + "px; white-space: nowrap;"}>{msg}</td>
+                <td><img src=${gunsou}/></td>
+                <td style=${"font-size: " + sz + "px; white-space: nowrap;"}>${msg}</td>
               </tr>
             </table>
           </div>
-        );
+        `);
       }
 
   function kill (msg) {
@@ -3320,7 +3320,8 @@ let PLUGIN_INFO =
     }
   });
 
-  around(events, 'onKeyPress', function (next, [event]) {
+  around(events, 'onKeyPress', function (next, args) {
+    let event = args[0];
     let keyStr = events.toString(event);
     let fmaping = let (fmap  = liberator.plugins.feedSomeKeys_3) (fmap && fmap.API.State.feeding);
     if (!fmaping && !events.feedingKeys && uncleanKeys.some(function(v) v == keyStr)) {

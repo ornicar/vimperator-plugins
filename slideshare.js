@@ -33,8 +33,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 }}} */
 
 // INFO {{{
-let INFO =
-<>
+let INFO = xml`
   <plugin name="Slideshare" version="1.1.1"
           href="http://vimpr.github.com/"
           summary="Controll slideshare's slide."
@@ -85,7 +84,7 @@ let INFO =
       <description><p>フルスクリーン切り換え</p></description>
     </item>
   </plugin>
-</>;
+`;
 // }}}
 
 
@@ -110,7 +109,8 @@ let INFO =
     let styleTogglers = Array.slice(doc.querySelectorAll('object')).map(makeStyleToggler.bind(null, hiddenStyle));
 
     return function (callback) {
-      main();
+      if (liberator.globalVariables.slideshare_auto_fullscreen)
+        main();
       styleTogglers.forEach(function (f) f());
       setTimeout(function () {
         if (callback)
@@ -158,14 +158,14 @@ let INFO =
   function FlashSlideshare (doc, callback) {
     let player = doc.querySelector('#player');
 
-    const fullScreenStyle = <><![CDATA[
+    const fullScreenStyle = `<![CDATA[
       position : fixed !important;
       top : 0px !important;
       left : 0px !important;
       z-index : 1000 !important;
       width : 100% !important;
       height : 100% !important;
-    ]]></>;
+    ]]>`;
 
     let toggleFullscreen = makeFullscreenToggler(doc, makeStyleToggler(fullScreenStyle, player));
 

@@ -33,9 +33,8 @@ THE POSSIBILITY OF SUCH DAMAGE.
 }}} */
 
 // INFO {{{
-let INFO =
-<>
-  <plugin name="MigemizedFind" version="2.11.4"
+let INFO = xml`
+  <plugin name="MigemizedFind" version="2.11.5"
           href="http://vimpr.github.com/"
           summary="Search and Highlight with Migemo."
           lang="en-US"
@@ -44,7 +43,7 @@ let INFO =
     <license>New BSD License</license>
     <project name="Vimperator" minVersion="3.0"/>
   </plugin>
-  <plugin name="MigemizedFind" version="2.11.4"
+  <plugin name="MigemizedFind" version="2.11.5"
           href="http://vimpr.github.com/"
           summary="Migemo で検索 &amp; ハイライト"
           lang="ja"
@@ -99,7 +98,7 @@ let INFO =
       </p></description>
     </item>
   </plugin>
-</>;
+`;
 // }}}
 
 (function () {
@@ -256,7 +255,7 @@ let INFO =
   }
 
   let colorsCompltions = [
-    [name, <span style={'color: ' + name}>{'\u25a0 ' + value}</span>]
+    [name, xml`<span style=${'color: ' + name}>${'\u25a0 ' + value}</span>`]
     for each ([name, value] in Iterator(colors))
   ];
 
@@ -412,13 +411,19 @@ let INFO =
       }
 
       let remover = function () {
-        let range = this.document.createRange();
-        range.selectNodeContents(span);
-        let content = range.extractContents();
-        range.setStartBefore(span);
-        range.insertNode(content);
-        range.selectNode(span);
-        range.deleteContents();
+        try {
+          let range = this.document.createRange();
+          range.selectNodeContents(span);
+          let content = range.extractContents();
+          range.setStartBefore(span);
+          range.insertNode(content);
+          range.selectNode(span);
+          range.deleteContents();
+        } catch (e if /The operation is insecure./.test(e.toString())) {
+          /* XXX * 必殺奥義 catch 黙殺
+           * 「/foo<CR>:reload<CR><WAIT_FOR_RELOAD>/bar<CR>」で、リロード前のページのハイライトを削除しようとしてエラーになる模様。
+           */
+        }
       };
 
       if (setRemover)
@@ -488,6 +493,7 @@ let INFO =
     findAgain: function (reverse) {
       let backwards = !!(!this.lastDirection ^ !reverse);
       let last = this.storage.lastResult;
+      let start, end;
 
       let frames = this.currentFrames;
 
@@ -510,7 +516,6 @@ let INFO =
       this.removeHighlight(this.lastColor);
 
       let str = this.lastSearchExpr;
-      let start, end;
 
       let result;
       let ret = this.find(str, backwards, this.makeBodyRange(last.frame), start, end);
@@ -607,7 +612,9 @@ let INFO =
     },
 
     findAgain: function findAgain (reverse) {
-      if (!MF.findAgain(reverse))
+      if (MF.findAgain(reverse))
+        liberator.echomsg('');
+      else
         liberator.echoerr('not found: ' + MF.lastSearchText);
     },
 
@@ -619,7 +626,9 @@ let INFO =
       }
       if (MF.currentSearchText !== command)
         MF.findFirst(command, forcedBackward);
-      if (!MF.submit())
+      if (MF.submit())
+        liberator.echomsg('');
+      else
         liberator.echoerr('not found: ' + MF.currentSearchText);
     },
 

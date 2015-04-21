@@ -1,4 +1,4 @@
-let INFO = //{{{
+let INFO = xml` //{{{
 <plugin name="statusbar panel" version="0.1"
         href="https://github.com/vimpr/vimperator-plugins/raw/master/statusbar_panel.js"
         summary="Click statusbar panel"
@@ -6,7 +6,7 @@ let INFO = //{{{
         xmlns="http://vimperator.org/namespaces/liberator">
     <author href="http://d.hatena.ne.jp/wlt/" email="wltlain@gmail.com">wlt</author>
     <license href="http://www.opensource.org/licenses/mit-license.php">MIT License</license>
-    <project name="vimperator" minVersion="2.3.1"/>
+    <project name="vimperator" minVersion="3.6"/>
     <p>
         ステータスバー（アドオンバー）にあるパネル（アイコン）をクリックするコマンドを提供します。
     </p>
@@ -29,9 +29,10 @@ let INFO = //{{{
             <p><oa>-double-click</oa>を指定するとダブルクリックになります。</p>
         </description>
   </item>
-</plugin>;
+</plugin>`;
 //}}}
 
+// https://developer.mozilla.org/en-US/docs/DOM/event.button
 let MOUSE_BUTTON_LEFT = 0;
 let MOUSE_BUTTON_MIDDLE = 1;
 let MOUSE_BUTTON_RIGHT = 2;
@@ -44,7 +45,7 @@ function getImages(panel) {
     var anonymousNodes = document.getAnonymousNodes(panel);
     for (let [k, anonymousNode] in Iterator(anonymousNodes)) {
         let node;
-        let result = document.evaluate('descendant-or-self::xul:image', anonymousNode, function() XUL.uri, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
+        let result = document.evaluate('descendant-or-self::xul:image', anonymousNode, function() XUL, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
         while ((node = result.iterateNext())) images.push(node);
     }
 
@@ -52,28 +53,28 @@ function getImages(panel) {
 }
 
 function makeIcon(panel) {
-    var icon = <image xmlns={XUL.uri}/>;
+    var icon = xml`<image xmlns=${XUL}/>`;
     var image = getImages(panel)[0];
 
     if (image) {
         let style = window.getComputedStyle(image, null);
         let src = image.src || style.listStyleImage.replace(/^url\("(.+)"\)$/, '$1');
         if (src != '') {
-            icon.@style = 'list-style-image: url("' + src + '");' +
-                          '-moz-image-region: ' + style.MozImageRegion;
+            let style_attr = `list-style-image: url("${src}"); -moz-image-region: ${style.MozImageRegion}`;
+            icon = xml`<image xmlns=${XUL} style=${style_attr}/>`;
         }
     }
     return icon;
 }
 
 function generateStatusbarpaneIDlList(filter) {
-    var panels = document.getElementsByTagNameNS(XUL.uri, 'statusbarpanel');
-    for ([k, p] in Iterator(panels)) {
-        if (p.hidden != true) {
+    var panels = document.getElementsByTagNameNS(XUL, 'statusbarpanel');
+    for (let i = 0; i < panels.length; i++) {
+        if (panels[i].hidden != true) {
             yield {
-                text: p.id,
+                text: panels[i].id,
                 desc: 'statusbarpanel',
-                icon: makeIcon(p)
+                icon: makeIcon(panels[i])
             };
         }
     }
@@ -116,7 +117,7 @@ commands.addUserCommand(['statusbarpanel'],'click statusbar panel',
             liberator.echoerr('No such statusbar panel: ' + id);
             return;
         }
-        var button = MOUSE_BUTTON_LEFT;
+        var button;
         switch (args['-button']) {
         case 'm': button = MOUSE_BUTTON_MIDDLE; break;
         case 'r': button = MOUSE_BUTTON_RIGHT; break;
@@ -140,7 +141,7 @@ commands.addUserCommand(['statusbarpanel'],'click statusbar panel',
             context.keys = { text: 'text', description: 'desc', icon: 'icon' };
             context.compare = CompletionContext.Sort.unsorted;
             context.process = [function (item, text) {
-                return <><span highlight="CompIcon">{item.icon ? item.icon : <></>}</span><span class="td-strut"/>{text}</>
+                return xml`<span highlight="CompIcon">${item.icon ? item.icon : ``}</span><span class="td-strut"/>${text}`
             }];
 
             var list = generateStatusbarpaneIDlList(arg);

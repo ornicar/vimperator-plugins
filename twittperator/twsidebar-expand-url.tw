@@ -4,8 +4,24 @@ require('twsidebar');
 (function () {
   let Config = liberator.globalVariables.twittperator_sidebar_expand_url_config || {
     host: ['ff.im', 'is.gd', 't.co', 'bit.ly', 'j.mp', 'htn.to', 'goo.gl', 'ow.ly'],
-    filter: function (url) {
-      return url.length > 60 ? url.substr(0, 60) + '...' : url;
+    photo: ['png', 'jpg', 'gif'],
+    filter: function (url, callback) {
+      let isStatus = /https?:\/\/twitter\.com\/(\w+)\/status(?:es)?\/(\d+)/.exec(url);
+      let isPhoto = /\/photo\/\d/;
+      if (isStatus) {
+        if (!isPhoto.test(isStatus.input)) {
+          plugins.twittperator.OAuth.jsonGet('http://api.twitter.com/1/statuses/show', {id:isStatus[2]}, function(msg){
+            callback('\u26A1 ' + msg.user.screen_name + ' : ' + msg.text);
+          });
+        }
+      } else if (Config.photo.indexOf(url.substr(-3)) >= 0) {
+          var img = document.createElement('image');
+          img.setAttribute('src', url);
+          img.setAttribute('style', 'max-height: 120px; max-width: 120px;');
+          callback([img, url.length > 30 ? url.substr(0, 30) + '...' : url], 'both');
+      } else {
+        callback(url.length > 60 ? url.substr(0, 60) + '...' : url);
+      }
     }
   }
 
@@ -57,11 +73,28 @@ require('twsidebar');
         tweet.text = tweet.text.replace(sUrl, eUrl);
         if (!sidebar().getElementById('tw-anekos-sb-home-list')) { return; }
         let fUrl = expand ? sUrl : eUrl;
+        eUrl = urls[i].media_url ? urls[i].media_url : eUrl;
         setTimeout(function () {
           let e = twsText(id);
           if (e) {
-            e.textContent = escapeBreakers(e.textContent.replace(fUrl, Config.filter(eUrl)));
-            scroll();
+            Config.filter(eUrl, function(filtered, mode){
+              switch (mode) {
+                case 'appendChild':
+                  e.parentElement.appendChild(filtered);
+                  break;
+                case 'both':
+                  if ( i == 0 ) {
+                    let br = document.createElementNS('http://www.w3.org/1999/xhtml', 'br')
+                    e.parentElement.appendChild(br);
+                  }
+                  e.parentElement.appendChild(filtered[0]);
+                  e.textContent = escapeBreakers(e.textContent.replace(fUrl, filtered[1]));
+                  break;
+                default:
+                  e.textContent = escapeBreakers(e.textContent.replace(fUrl, filtered));
+              }
+              setTimeout(function () { scroll(); }, 500);
+            });
           }
         }, 100);
       });

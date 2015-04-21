@@ -1,5 +1,5 @@
 // PLUGIN_INFO {{{
-let PLUGIN_INFO =
+let PLUGIN_INFO = xml`
 <VimperatorPlugin>
   <name>{NAME}</name>
   <description>Map behave like text-object</description>
@@ -52,7 +52,7 @@ let PLUGIN_INFO =
           t:
             Tabs
   ]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 // }}}
 
 // Vimperator plugin: 'Map behave like text-object'
@@ -281,12 +281,12 @@ let PLUGIN_INFO =
         liberator.modules.mappings.addUserMap([liberator.modules.modes.NORMAL],
             [prefix + motion.id + "/"], "Browser Object Mappings",
             function (){
-                liberator.modules.commandline.input("/",function(s){
+                liberator.modules.commandline.input(motion.id + "/",function(s){
                     var target = browserObject.targets.get("t");
                     var targetCollection = (function(ary){
                         var pattern;
                         if(XMigemoCore != undefined){
-                            pattern = new RegExp(XMigemoTextUtils.sanitize(s) + "|" + XMigemoCore.getRegExp(s),"i");
+                            pattern = new RegExp(XMigemoService.textUtils.sanitize(s) + "|" + XMigemoCore.getRegExp(s),"i");
                         }else{
                             pattern = new RegExp(s,"i");
                         }

@@ -33,13 +33,13 @@ THE POSSIBILITY OF SUCH DAMAGE.
 }}} */
 
 // PLUGIN_INFO {{{
-let PLUGIN_INFO =
+let PLUGIN_INFO = xml`
 <VimperatorPlugin>
   <name>Link Opener</name>
   <name lang="ja">Link Opener</name>
   <description>Link Opener</description>
   <description lang="ja">リンクを開く</description>
-  <version>2.3.2</version>
+  <version>2.4.0</version>
   <author mail="anekos@snca.net" homepage="http://d.hatena.ne.jp/nokturnalmortum/">anekos</author>
   <license>new BSD License (Please read the source code comments of this plugin)</license>
   <license lang="ja">修正BSDライセンス (ソースコードのコメントを参照してください)</license>
@@ -49,12 +49,11 @@ let PLUGIN_INFO =
   <detail><![CDATA[
     :help link-opener-plugin
   ]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 // }}}
 // INFO {{{
-let INFO =
-<>
-  <plugin name="link-opener" version="2.3.2"
+let INFO = xml`
+  <plugin name="link-opener" version="2.4.0"
           href="http://github.com/vimpr/vimperator-plugins/blob/master/lo.js"
           summary="Link Opener"
           lang="en-US"
@@ -103,7 +102,7 @@ let INFO =
       </description>
     </item>
   </plugin>
-  <plugin name="link-opener" version="2.3.2"
+  <plugin name="link-opener" version="2.4.0"
           href="http://github.com/vimpr/vimperator-plugins/blob/master/lo.js"
           summary="Link Opener"
           lang="ja"
@@ -153,7 +152,7 @@ let INFO =
       </description>
     </item>
   </plugin>
-</>;
+`;
 // }}}
 
 // Usage:
@@ -188,8 +187,8 @@ let INFO =
   function constant (value)
     function () value;
 
-  function isHttpLink (link)
-    (link.href && link.href.indexOf('http') == 0);
+  function isHttpOrFileLink (link)
+    (link.href && ((link.href.indexOf('http') == 0) || (/^file:/.test(link.href))));
 
   function isCurrent (link)
     (link.href === buffer.URL);
@@ -203,7 +202,7 @@ let INFO =
   function getLinks (includeCurrent) {
     function _get (content)
       Array.prototype.concat.apply(Array.slice(content.document.links), Array.slice(content.frames).map(_get));
-    return _get(content).filter(isHttpLink).filter(includeCurrent ? constant(true) : not(isCurrent));
+    return _get(content).filter(isHttpOrFileLink).filter(includeCurrent ? constant(true) : not(isCurrent));
   }
 
   function makeRegExp (str) {
@@ -248,6 +247,11 @@ let INFO =
         if (!links.length)
           return;
 
+        if (args['-copy']) {
+          util.copyToClipboard(links.map(function (it) it.href).join("\n"));
+          return;
+        }
+
         liberator.open(links[0].href, where);
 
         if (links.length <= 1)
@@ -271,7 +275,8 @@ let INFO =
         options: [
           [['-interval', '-i'], commands.OPTION_INT],
           [['-where', '-w'], commands.OPTION_STRING, null, WHERE_COMPLETIONS],
-          [['-include-current', '-I'], commands.OPTION_NOARG]
+          [['-include-current', '-I'], commands.OPTION_NOARG],
+          [['-copy', '-c'], commands.OPTION_NOARG]
         ],
         completer: function (context, args) {
           context.title = ['URL', 'Text Content'];
@@ -336,7 +341,7 @@ let INFO =
           context.process = [
             process[0],
             function (item, text)
-              (item.thumbnail ? <><img src={item.thumbnail} style={CompItemStyle}/>{text}</>
+              (item.thumbnail ? `<img src={item.thumbnail} style={CompItemStyle}/>{text}`
                               : process[1].apply(this, arguments))
           ];
           context.completions = lolinks.map(function (it, i) ({elem: it, index: i}));

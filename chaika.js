@@ -33,8 +33,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 }}} */
 
 // INFO {{{
-let INFO =
-<>
+let INFO = xml`
   <plugin name="Chaika-Controller" version="1.0.0"
           href="http://vimpr.github.com/"
           summary="for Chika"
@@ -59,13 +58,14 @@ let INFO =
       </p></description>
     </item>
   </plugin>
-</>;
+`;
 // }}}
 
 (function () {
   const Chaika = {};
   Components.utils.import("resource://chaika-modules/ChaikaThread.js", Chaika);
-  Components.utils.import("resource://chaika-modules/Chaika2chViewer.js", Chaika);
+  // FIXME
+  // Components.utils.import("resource://chaika-modules/Chaika2chViewer.js", Chaika);
 
   function deleteCurrentThreadLog () {
     let currentURI = getBrowser().currentURI.QueryInterface(Ci.nsIURL);
@@ -108,16 +108,17 @@ let INFO =
             }
           }
         ),
-        new Command(
-          ['auth'],
-          'Maru auth(?)',
-          function (args) {
-            Chaika.Chaika2chViewer.auth();
-          },
-          {
-            argCount: '0'
-          }
-        ),
+        // FIXME
+        // new Command(
+        //   ['auth'],
+        //   'Maru auth(?)',
+        //   function (args) {
+        //     Chaika.Chaika2chViewer.auth();
+        //   },
+        //   {
+        //     argCount: '0'
+        //   }
+        // ),
         new Command(
           ['abonem[anager]'],
           'Open abone manager',

@@ -5,7 +5,7 @@
  * TODO:ADDにbufferからのリストを入れられるように
 */
 
-let PLUGIN_INFO =
+let PLUGIN_INFO = xml`
 <VimperatorPlugin>
 	<name>readitlater</name>
 	<description lang="ja">Read it Later を快適に使うためのプラグインです</description>
@@ -55,7 +55,7 @@ let PLUGIN_INFO =
 
 
 	]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 
 
 (function(){
@@ -277,11 +277,16 @@ let PLUGIN_INFO =
 
 		}, // }}}
 
+		getLogins : function() {
+			let manager = Components.classes["@mozilla.org/login-manager;1"].getService(Components.interfaces.nsILoginManager);
+			return manager.findLogins({},"https://getpocket.com","",null).concat(
+			       manager.findLogins({}, "http://getpocket.com","",null))
+		},
+
 		get : function(state, callback){ // {{{
 		// document => http://readitlaterlist.com/api/docs#get
 
-		let manager = Components.classes["@mozilla.org/login-manager;1"].getService(Components.interfaces.nsILoginManager);
-		let logins = manager.findLogins({},"http://readitlaterlist.com","",null);
+		let logins = this.getLogins();
 
 		let req = new libly.Request(
 			"https://readitlaterlist.com/v2/get" , // url
@@ -316,8 +321,7 @@ let PLUGIN_INFO =
 
 		add : function(url,title,callback){ // {{{
 
-		let manager = Components.classes["@mozilla.org/login-manager;1"].getService(Components.interfaces.nsILoginManager);
-		let logins = manager.findLogins({},"http://readitlaterlist.com","",null);
+		let logins = this.getLogins();
 		let req = new libly.Request(
 			"https://readitlaterlist.com/v2/add" , // url
 			null, // headers
@@ -412,18 +416,18 @@ let PLUGIN_INFO =
 
 		req.addEventListener("success",function(data){
 			let res = libly.$U.evalJson(data.responseText);
-			liberator.echo(
+			liberator.echo(xml`
 			<style type="text/css"><![CDATA[
 				div.stats{font-weight:bold;text-decoration:underline;color:gold;padding-left:1em;line-height:1.5em;}
-			]]></style> +
-			<div>#ReadItLater Stats</div> +
-			<div class="stats">
-				since : {unixtimeToDate(res.user_since)} <br />
-				list : {res.count_list} <br />
-				unread : {res.count_unread} <br />
-				read : {res.count_read} <br />
+			]]></style>` +
+			xml`<div>#ReadItLater Stats</div>` +
+			xml`<div class="stats">
+				since : ${unixtimeToDate(res.user_since)} <br />
+				list : ${res.count_list} <br />
+				unread : ${res.count_unread} <br />
+				read : ${res.count_read} <br />
 			</div>
-			);
+			`);
 		});
 
 		req.addEventListener("failure",function(data){
@@ -452,17 +456,17 @@ let PLUGIN_INFO =
 		);
 
 		req.addEventListener("success",function(data){
-			liberator.echo(
+			liberator.echo(xml`
 			<div>
-				X-Limit-User-Limit : {data.transport.getResponseHeader("X-Limit-User-Limit")} <br />
-				X-Limit-User-Remaining : {data.transport.getResponseHeader("X-Limit-User-Remaining")} <br />
-				X-Limit-User-Reset : {data.transport.getResponseHeader("X-Limit-User-Reset")} <br />
-				X-Limit-Key-Limit : {data.transport.getResponseHeader("X-Limit-Key-Limit")} <br />
-				X-Limit-Key-Remaining : {data.transport.getResponseHeader("X-Limit-Key-Remaining")} <br />
-				X-Limit-Key-Reset : {data.transport.getResponseHeader("X-Limit-Key-Reset")} <br />
+				X-Limit-User-Limit : ${data.transport.getResponseHeader("X-Limit-User-Limit")} <br />
+				X-Limit-User-Remaining : ${data.transport.getResponseHeader("X-Limit-User-Remaining")} <br />
+				X-Limit-User-Reset : ${data.transport.getResponseHeader("X-Limit-User-Reset")} <br />
+				X-Limit-Key-Limit : ${data.transport.getResponseHeader("X-Limit-Key-Limit")} <br />
+				X-Limit-Key-Remaining : ${data.transport.getResponseHeader("X-Limit-Key-Remaining")} <br />
+				X-Limit-Key-Reset : ${data.transport.getResponseHeader("X-Limit-Key-Reset")} <br />
 
 			</div>
-			);
+			`);
 		});
 
 		req.addEventListener("failure",function(data){

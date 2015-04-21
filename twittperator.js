@@ -2,7 +2,7 @@
  * The MIT License
  *
  * Copyright (c) 2010 teramako
- * Copyright (c) 2010-2012 anekos
+ * Copyright (c) 2010-2013 anekos
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +24,8 @@
  */
 
 // INFO {{{
-let INFO =
-<>
-  <plugin name="Twittperator" version="1.19.0"
+let INFO = xml`
+  <plugin name="Twittperator" version="1.19.2"
           href="https://github.com/vimpr/vimperator-plugins/raw/master/twittperator.js"
           summary="Twitter Client using OAuth and Streaming API">
     <author email="teramako@gmail.com" href="http://d.hatena.ne.jp/teramako/">teramako</author>
@@ -175,7 +174,7 @@ let INFO =
         Write the plugin.
     </p>
   </plugin>
-  <plugin name="Twittperator" version="1.19.0"
+  <plugin name="Twittperator" version="1.19.2"
           href="https://github.com/vimpr/vimperator-plugins/raw/master/twittperator.js"
           lang="ja"
           summary="OAuth/StreamingAPI対応Twitterクライアント">
@@ -333,7 +332,7 @@ let INFO =
         プラグイン書きましょう。
     </p>
   </plugin>
-</>;
+`;
 
 // }}}
 
@@ -1254,7 +1253,7 @@ let INFO =
                   callback(d.responseText);
               }
             }else{
-              callback(d.statusText);
+              throw d.statusText || d.toString();
             }
           },
         };
@@ -1287,7 +1286,7 @@ let INFO =
               }
             } else {
               // typeof d == object
-              callback(d);
+              throw d.statusText || d.toString();
             }
           }
         };
@@ -1316,7 +1315,7 @@ let INFO =
                   callback(d.responseText);
               }
             }else{
-              callback(d.statusText);
+              throw d.statusText;
             }
           },
         };
@@ -1583,6 +1582,7 @@ let INFO =
           updateRetryTimer(restart);
           let lines = data.split(/\r\n|[\r\n]/);
           if (lines.length >= 2) {
+            restartCount = 0;
             lines[0] = buf + lines[0];
             for (let [, line] in Iterator(lines.slice(0, -1))) {
               try {
@@ -1636,13 +1636,13 @@ let INFO =
   }; // }}}
   let Twitter = { // {{{
     destroy: function(id) { // {{{
-      tw.jsonDelete("statuses/destroy/" + id, null, function(res) {
+      tw.jsonPost("statuses/destroy/" + id, null, function(res) {
         res = Utils.fixStatusObject(res);
         Twittperator.echo("delete: " + res.user.name + " " + res.text)
       });
     }, // }}}
     favorite: function(id) { // {{{
-      tw.jsonPost("favorites/create/" + id, null, function(res) {
+      tw.jsonPost("favorites/create", {id: id}, function(res) {
         res = Utils.fixStatusObject(res);
         Twittperator.echo("fav: " + res.user.name + " " + res.text)
       });
@@ -1697,6 +1697,9 @@ let INFO =
     }, // }}}
     searchUsers: function(word, callback) { // {{{
       tw.jsonGet("users/search", { q: word }, callback);
+    }, // }}}
+    searchTweets: function(word, callback) { // {{{
+      tw.jsonGet("search/tweets", { q: word }, callback);
     } // }}}
   }; // }}}
   let Utils = { // {{{
@@ -1707,9 +1710,9 @@ let INFO =
         let center = m[0];
         let [head, tail] = [center[0], center.slice(1)];
         let right = str.substring(m.index + m[0].length);
-        let content = head === "@" ? <a highlight="URL" href={setting.showTLURLScheme + "://twitter.com/" + tail}> {center} </a>
-                                   : <a highlight="URL" href={center}> {center} </a>;
-        return <>{Utils.anchorLink(left)}{content}{Utils.anchorLink(right)}</>;
+        let content = head === "@" ? xml`<a highlight="URL" href=${setting.showTLURLScheme + "://twitter.com/" + tail}> ${center} </a>`
+                                   : xml`<a highlight="URL" href=${center}> ${center} </a>`;
+        return xml`${Utils.anchorLink(left)}${content}${Utils.anchorLink(right)}`;
       }
       return str;
     }, // }}}
@@ -1782,7 +1785,7 @@ let INFO =
         {},
         function(json) {
           function idToIcon (id) {
-            return <span><a href={'http://twitter.com/#!/' + id}>{icons[id] ? <img src={icons[id]}/> : <>&#128568;</>}</a></span>;
+            return `<span><a href=${'http://twitter.com/#!/' + id}>${icons[id] ? `<img src=${icons[id]}/>` : "&#128568;"}</a></span>`;
           }
 
           let icons = {};
@@ -1790,14 +1793,14 @@ let INFO =
             if (t.user && t.user.id_str && t.user.profile_image_url)
               icons[t.user.id_str] = t.user.profile_image_url;
           }
-          liberator.echo(<>
+          liberator.echo(xml`
             <dl>
-              <dt>Retweeter {json.retweeters_count}</dt>
-              <dd>{template.map(json.retweeters, idToIcon)}</dd>
-              <dt>Favoriters {json.favoriters_count}</dt>
-              <dd>{template.map(json.favoriters, idToIcon)}</dd>
+              <dt>Retweeter ${json.retweeters_count}</dt>
+              <dd>${template.map(json.retweeters, idToIcon)}</dd>
+              <dt>Favoriters ${json.favoriters_count}</dt>
+              <dd>${template.map(json.favoriters, idToIcon)}</dd>
             </dl>
-          </>);
+          `);
         }
       );
     }, // }}}
@@ -1872,37 +1875,36 @@ let INFO =
     }, // }}}
     lookupUser: function(users) { // {{{
       function showUsersInfo(json) { // {{{
-        let xml = modules.template.map(json, function(user) {
-          return <>
+        let body = modules.template.map(json, function(user) {
+          return xml`
             <tr>
               <td class="twittperator lookup-user photo">
-                <img src={user.profile_image_url} />
+                <img src=${user.profile_image_url} />
               </td>
               <td class="twittperator lookup-user screen-name">
-                <a href={"https://twitter.com/#!/" + user.screen_name}>
-                  {user.name}
+                <a href=${"https://twitter.com/#!/" + user.screen_name}>
+                  ${user.name}
                 </a>
               </td>
               <td class="twittperator lookup-user attributes">
-                {user.location} -
-                id {user.id_str} -
-                {user.following ? '' : 'not'} following -
-                {user.friends_count}/{user.followers_count} ee/er -
-                {user.statuses_count} tweets -
-                {user.favourites_count} favs -
-                {user.listed_count} listed -
-                from {new Date(user.created_at).toLocaleString()}
+                ${user.location} -
+                id ${user.id_str} -
+                ${user.following ? '' : 'not'} following -
+                ${user.friends_count}/${user.followers_count} ee/er -
+                ${user.statuses_count} tweets -
+                ${user.favourites_count} favs -
+                ${user.listed_count} listed -
+                from ${new Date(user.created_at).toLocaleString()}
               </td>
             </tr>
             <tr>
               <td class="twittperator lookup-user description" colspan="3">
-                {user.description}
+                ${user.description}
               </td>
             </tr>
-          </>;
+          `;
         });
-        liberator.echo(
-          <>
+        liberator.echo(xml`
             <style type="text/css"><![CDATA[
               .twittperator.lookup-user.photo { vertical-align: top; width: 28px; }
               .twittperator.lookup-user.photo img { border: 0px; width: 24px; height: 24px; vertical-align: baseline; margin: 1px; }
@@ -1910,9 +1912,8 @@ let INFO =
               .twittperator.lookup-user.description { white-space: normal !important; }
               .twittperator.lookup-user.description a { text-decoration: none; }
             ]]></style>
-            <table>{xml}</table>
-          </>
-        );
+            <table>${body}</table>
+        `);
       } // }}}
 
       let ids = [], screenNames = [];
@@ -1993,88 +1994,68 @@ let INFO =
       function menuEvent(st)
         ("window.parent.liberator.modules.plugins.twittperator.Twittperator.showStatusMenu(" + parseInt(st.id) + ")");
 
-      let html = <style type="text/css"><![CDATA[
+      let html = `<style type="text/css"><![CDATA[
           .twittperator.timeline.user { vertical-align: top; }
           .twittperator.timeline.entry-content { white-space: normal !important; }
           .twittperator.timeline.entry-content a { text-decoration: none; }
           .twittperator.timeline.entry-content.rt:before { content: "RT "; color: silver; }
           img.twittperator.timeline.photo { border: 0px; width: 24px; height: 24px; vertical-align: baseline; margin: 1px; }
-      ]]></style>.toSource()
-                 .replace(/(?:\r\n|[\r\n])[ \t]*/g, " ") +
+      ]]></style>`
+          .replace(/(?:\r\n|[\r\n])[ \t]*/g, " ") +
+          '<table>' +
           s.reduce(function(table, status) {
-            return table.appendChild(
-              ("retweeted_status" in status) ?
-              let (rt = status.retweeted_status)
-              <tr>
+            if ("retweeted_status" in status) {
+              let rt = status.retweeted_status;
+              return table + xml`<tr>
                 <td class="twittperator timeline user">
-                  <a href={userURL(rt.user.screen_name)}>
-                    <img src={rt.user.profile_image_url} alt={rt.user.screen_name} class="twittperator timeline photo"/>
-                    <strong>{rt.user.screen_name}&#x202C;</strong>
+                  <a href=${userURL(rt.user.screen_name)}>
+                    <img src=${rt.user.profile_image_url} alt=${rt.user.screen_name} class="twittperator timeline photo"/>
+                    <strong>${rt.user.screen_name}&#x202C;</strong>
                   </a>
-                  <a href={userURL(status.user.screen_name)}>
-                    <img src={status.user.profile_image_url} alt={status.user.screen_name} class="twittperator timeline photo"/>
+                  <a href=${userURL(status.user.screen_name)}>
+                    <img src=${status.user.profile_image_url} alt=${status.user.screen_name} class="twittperator timeline photo"/>
                   </a>
                 </td>
                 <td class="twittperator timeline entry-content rt">
-                  {Utils.anchorLink(rt.text)}
+                  ${Utils.anchorLink(rt.text)}
                 </td>
                 <td class="twittperator timeline menu">
-                  <a href="javascript: void 0" onclick={menuEvent(status)}>
-                   &#1758;
-                  </a>
+                  <a href="javascript: void 0" onclick=${menuEvent(status)}>&#1758;</a>
                 </td>
-              </tr> :
-              <tr>
+              </tr>`.toString();
+            } else {
+              return table + xml`<tr>
                 <td class="twittperator timeline user">
-                  <a href={userURL(status.user.screen_name)}>
-                    <img src={status.user.profile_image_url} alt={status.user.screen_name} class="twittperator timeline photo"/>
-                    <strong title={status.user.name}>{status.user.screen_name}&#x202C;</strong>
+                  <a href=${userURL(status.user.screen_name)}>
+                    <img src=${status.user.profile_image_url} alt=${status.user.screen_name} class="twittperator timeline photo"/>
+                    <strong title=${status.user.name}>${status.user.screen_name}&#x202C;</strong>
                   </a>
                 </td>
                 <td class="twittperator timeline entry-content">
-                  {Utils.anchorLink(status.text)}
+                  ${Utils.anchorLink(status.text)}
                 </td>
                 <td class="twittperator timeline menu">
-                  <a href="javascript: void 0" onclick={menuEvent(status)}>
-                   &#1758;
-                  </a>
+                  <a href="javascript: void 0" onclick=${menuEvent(status)}>&#1758;</a>
                 </td>
-              </tr>
-              );
+              </tr>`.toString();
+            }
+          }, "").replace(/(?:\r\n|[\r\n])[ \t]*/g, " ") +
+          '</table>';
 
-          }, <table/>)
-            .toSource().replace(/(?:\r\n|[\r\n])[ \t]*/g, " ");
-
-      liberator.echo(html, true);
+      window.Services.console.logStringMessage(html);
+      liberator.echo(new template.maybeXML(html), true);
     }, // }}}
     showTwitterMentions: function(arg) { // {{{
-      tw.jsonGet("statuses/mentions", null, function(res) {
+      tw.jsonGet("statuses/mentions_timeline", null, function(res) {
         Twittperator.showTL(res.map(Utils.fixStatusObject));
       });
     }, // }}}
     showTwitterSearchResult: function(word) { // {{{
-      // フォーマットが違うの変換
-      function konbuArt(obj) {
-        return {
-          __proto__: obj,
-          user: {
-            __proto__: obj,
-            screen_name: obj.from_user,
-            id: obj.from_id
-          }
-        };
-      }
-
-      Utils.xmlhttpRequest({
-        method: 'GET',
-        url: "http://search.twitter.com/search.json?" + tw.buildQuery({ q: word, rpp: setting.count, lang: setting.lang }),
-        onload: function(xhr) {
-          let res = JSON.parse(xhr.responseText);
-          if (res.results.length > 0) {
-            Twittperator.showTL(res.results.map(Utils.fixStatusObject).map(konbuArt));
-          } else {
-            Twittperator.echo("No results found.")
-          }
+      Twitter.searchTweets(word, function(res){
+        if (res.statuses.length > 0) {
+          Twittperator.showTL(res.statuses.map(Utils.fixStatusObject));
+        } else {
+          Twittperator.echo("No results found.")
         }
       });
     }, // }}}
@@ -2154,7 +2135,7 @@ let INFO =
     notMine: function (st)
       let (n = setting.screenName)
         (n ? (!st.user || st.user.screen_name !== n) : st),
-    mine: function (st)
+    selectMine: function (st)
       (!Predicates.notMine(st))
   }; // }}}
   let Completers = (function() { // {{{
@@ -2172,25 +2153,25 @@ let INFO =
       context.compare = void 0;
       context.createRow = function(item, highlightGroup) {
         if (highlightGroup === "CompTitle") {
-          return <div highlight="CompTitle" style="white-space: nowrap">
-              <li highlight="CompDesc">{item}&#160;</li>
-          </div>;
+          return xml`<div highlight="CompTitle" style="white-space: nowrap">
+              <li highlight="CompDesc">${item}&#160;</li>
+          </div>`;
         }
 
         let [value, st] = item.item;
         if (st.user) {
-          return <div highlight="CompItem" style="white-space: nowrap">
+          return xml`<div highlight="CompItem" style="white-space: nowrap">
               <li highlight="CompDesc">
-                <img src={st.user.profile_image_url} style="max-width: 24px; max-height: 24px"/>
-                &#160;{st.user.screen_name}: {st.text}
+                <img src=${st.user.profile_image_url} style="max-width: 24px; max-height: 24px"/>
+                &#160;${st.user.screen_name}: ${st.text}
               </li>
-          </div>;
+          </div>`;
         } else {
-          return <div highlight="CompItem" style="white-space: nowrap">
+          return xml`<div highlight="CompItem" style="white-space: nowrap">
               <li highlight="CompDesc">
-                {st.text}
+                ${st.text}
               </li>
-          </div>;
+          </div>`;
         }
       };
 
@@ -2360,20 +2341,22 @@ let INFO =
       description: "Display status information",
       action: function(arg) {
         function dtdd(obj) {
-          let items = <></>;
+          let items = "";
           for (let [n, v] in Iterator(obj)) {
             let cont = (v && typeof v === "object") ? dtdd(v) : v;
-            items += <><dt>{n}</dt><dd>{cont}</dd></>;
+            items += `<dt>${n}</dt><dd>${cont}</dd>`;
           }
 
-          return <dl>{items}</dl>;
+          return `<dl>${items}</dl>`;
         }
 
         let m = arg.match(/^\d+/);
         if (!m)
           return;
         let id = m[0];
-        history.filter(function(st) st.id === id).map(dtdd).forEach(liberator.echo);
+        history.filter(function(st) st.id === id).map(dtdd).forEach(function(v) {
+          liberator.echo(new template.maybeXML(v));
+        });
       },
       timelineCompleter: true,
       completer: Completers.rawid(function(st) st.id)
@@ -2658,7 +2641,7 @@ let INFO =
       proxyPort: gv.twittperator_proxy_port,
       screenName: gv.twittperator_screen_name,
       apiURLBase: "http" + (!!gv.twittperator_use_ssl_connection_for_api_ep ? "s" : "") +
-                  "://api.twitter.com/" + (gv.twittperator_twitter_api_version || 1)  + "/",
+                  "://api.twitter.com/" + (gv.twittperator_twitter_api_version || "1.1")  + "/",
       trackWords: gv.twittperator_track_words,
       count: (gv.twittperator_count || 20),
       lang: (gv.twittperator_lang || ''),

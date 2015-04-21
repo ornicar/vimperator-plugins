@@ -1,5 +1,5 @@
 /* NEW BSD LICENSE {{{
-Copyright (c) 2010, anekos.
+Copyright (c) anekos.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -33,13 +33,13 @@ THE POSSIBILITY OF SUCH DAMAGE.
 }}} */
 
 // PLUGIN_INFO {{{
-let PLUGIN_INFO =
+let PLUGIN_INFO = xml`
 <VimperatorPlugin>
   <name>Zoom Em All</name>
   <name lang="ja">Zoom Em All</name>
   <description>Zoom them all.</description>
   <description lang="ja">ブラウザ全体をズーム</description>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
   <author mail="anekos@snca.net" homepage="http://d.hatena.ne.jp/nokturnalmortum/">anekos</author>
   <license>new BSD License (Please read the source code comments of this plugin)</license>
   <license lang="ja">修正BSDライセンス (ソースコードのコメントを参照してください)</license>
@@ -52,12 +52,11 @@ let PLUGIN_INFO =
   <detail lang="ja"><![CDATA[
     ----
   ]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 // }}}
 // INFO {{{
-let INFO =
-<>
-  <plugin name="ZoomEmAll" version="1.1.0"
+let INFO = xml`
+  <plugin name="ZoomEmAll" version="1.1.1"
           href="http://github.com/vimpr/vimperator-plugins/blob/master/zoom-em-all.js"
           summary="Zoom or pan for whole firefox."
           lang="en-US"
@@ -76,7 +75,7 @@ let INFO =
       </description>
     </item>
   </plugin>
-  <plugin name="ZoomEmAll" version="1.1.0"
+  <plugin name="ZoomEmAll" version="1.1.1"
           href="http://github.com/vimpr/vimperator-plugins/blob/master/zoom-em-all.js"
           summary="ブラウザ全体をズーム"
           lang="ja"
@@ -95,7 +94,7 @@ let INFO =
       </description>
     </item>
   </plugin>
-</>;
+`;
 // }}}
 
 (function () {
@@ -105,7 +104,7 @@ let INFO =
       getInterface(Ci.nsIWebNavigation).
       QueryInterface(Ci.nsIDocShell).
       contentViewer.
-      QueryInterface(Ci.nsIMarkupDocumentViewer);
+      QueryInterface(Ci.nsIMarkupDocumentViewer || Ci.nsIContentViewer);
 
   __context__.__defineGetter__('fullZoom', function () docViewer.fullZoom);
   __context__.__defineSetter__('fullZoom', function (v) docViewer.fullZoom = v);

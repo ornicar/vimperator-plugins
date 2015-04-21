@@ -1,4 +1,4 @@
-var PLUGIN_INFO =
+var PLUGIN_INFO = xml`
 <VimperatorPlugin>
 <name>{NAME}</name>
 <description>Hint mode for Tombloo</description>
@@ -18,7 +18,7 @@ let g:hint_tombloo_xpath = '//img'
     Share target element by Tombloo
 
 ]]></detail>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 
 (function () {
 
@@ -29,7 +29,8 @@ hints.addMode(
     hintKey,
     'Share by Tombloo',
     function (elem) {
-        var tomblooService = Cc['@brasil.to/tombloo-service;1'].getService().wrappedJSObject.Tombloo.Service;
+        var tombloo = Cc['@tombfix.github.io/tombfix-service;1'] || Cc['@brasil.to/tombloo-service;1'];
+        var tomblooService = tombloo.getService().wrappedJSObject.Tombloo.Service;
 
         var d = window.content.document;
         var w = window.content.wrappedJSObject;

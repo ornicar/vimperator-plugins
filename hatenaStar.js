@@ -1,14 +1,14 @@
-var PLUGIN_INFO =
+var PLUGIN_INFO = xml`
 <VimperatorPlugin>
 	<name>{NAME}</name>
 	<description>Add Hatena Star.</description>
 	<description lang="ja">はてなスターをつける。</description>
 	<author mail="mattn.jp@gmail.com">mattn</author>
-	<version>0.1.3</version>
+	<version>0.1.4</version>
 	<minVersion>2.3pre</minVersion>
 	<maxVersion>2.3pre</maxVersion>
 	<updateURL>https://github.com/vimpr/vimperator-plugins/raw/master/hatenaStar.js</updateURL>
-</VimperatorPlugin>;
+</VimperatorPlugin>`;
 (function() {
 
 const Cc = Components.classes;
@@ -48,12 +48,11 @@ function blink(aNode) {
 }
 
 function addHatenaStar (elem) {
-	var e = document.createEvent('MouseEvents');
+	var e = content.document.createEvent('MouseEvents');
 	// "Hatena.Star.AddButton.selectedText" is initialized on mouseover.
-	e.initMouseEvent('mouseover', true, true, window, 1, 10, 50, 10, 50, 0, 0, 0, 0, 1, elem);
+	e.initMouseEvent('mouseover', true, true, content.window, 1, 10, 50, 10, 50, 0, 0, 0, 0, 1, elem);
 	elem.dispatchEvent(e);
-	e.initMouseEvent('click', true, true, window, 1, 10, 50, 10, 50, 0, 0, 0, 0, 1, elem);
-	elem.dispatchEvent(e);
+	buffer.followLink(elem, liberator.CURRENT_TAB);
 }
 
 liberator.modules.commands.addUserCommand(['hatenastar', 'hatenas'], 'add Hatena Star',
